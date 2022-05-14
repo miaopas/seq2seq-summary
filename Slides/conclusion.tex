@@ -1,0 +1,49 @@
+\begin{frame}
+	\frametitle{Summary}
+
+	We introduced a basic mathematical setting that allows
+	precise analysis (in the linear setting)
+	of three architectures for sequence modelling
+	\begin{itemize}
+		\item RNN, CNN, Recurrent Encoder-Decoder
+	\end{itemize}
+
+	From the approximation viewpoint
+	\begin{itemize}
+		\item Can all achieve density in appropriate functional spaces
+		\item Efficient approximation depends on different notions of complexity
+		\begin{itemize}
+			\item RNN: Exponential memory decay
+			\item CNN: Low rank under tensorization
+			\item Recurrent Encoder-Decoder:
+			Low rank under temporal products
+		\end{itemize}
+	\end{itemize}
+
+	\begin{empheq}[box=\mymath]{gather*}
+		\text{
+			Need \alert{structural compatibility}
+			between the model and the target
+		}
+    \end{empheq}
+
+\end{frame}
+
+\begin{frame}
+	\frametitle{References}
+
+	\begin{enumerate}
+		\item
+		\fullcite[]{li2020onthe}
+		\item
+		\fullcite[]{jiang2021approximation}
+		\item
+		\fullcite[]{li2022approxlinear}
+		\item
+		\fullcite[]{li2021approxed}
+		\item
+		\fullcite[]{li2022deep}
+	\end{enumerate}
+
+
+\end{frame}

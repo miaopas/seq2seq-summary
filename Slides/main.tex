@@ -1,0 +1,63 @@
+\documentclass[t,11pt,aspectratio=1610]{beamer}
+% \usetheme{focus}
+\usetheme[numbering=fullbar]{focus}
+\definecolor{nusorange}{RGB}{235,123,8}
+\definecolor{nusblue}{RGB}{0,61,124}
+\definecolor{nusgreen}{RGB}{0,176,80}
+\definecolor{nusgray}{RGB}{64,64,64}
+\definecolor{main}{RGB}{0,61,124}
+% \definecolor{background}{RGB}{250, 250, 250}  % GREY
+\definecolor{background}{RGB}{255, 255, 255}  % WHITE
+\setbeamercolor{normal text}{fg=nusgray}
+\setbeamercolor{alerted text}{fg=nusgreen}
+\setbeamercolor{example text}{fg=nusblue}
+
+% PACKAGES
+\input{preamble.tex}
+
+\title{Machine Learning and Dynamical Systems}
+\subtitle{Approximation Theory for Sequence Modelling}
+
+\titlegraphic{
+    \vspace{0.5cm}
+    \includegraphics[width=3cm]{figures/nus_logo.png}
+}
+\author[shortname]{
+    \textbf{Qianxiao Li}
+    {
+        \small \\
+        \color{nusblue} Email: qianxiao@nus.edu.sg \\
+        \color{nusblue} Website: https://blog.nus.edu.sg/qianxiaoli
+        \normalsize
+    }
+    % \and
+}
+\date{
+    % \vspace{.5cm}
+    Numerical Analysis and Scientific Computing Seminar \\
+    Courant Institute, NYU \\
+    29 April 2022
+}
+
+\begin{document}
+
+    \begin{frame}
+        \maketitle
+    \end{frame}
+
+    % \begin{frame}[c]
+    %     \tableofcontents[hideallsubsections]
+    %     % \tableofcontents
+    % \end{frame}
+
+    \input{background.tex}
+    \input{rnn.tex}
+    \input{cnn.tex}
+    \input{encdec.tex}
+    \input{conclusion.tex}
+
+    \begin{frame}[focus]
+        Thank you!
+    \end{frame}
+
+\end{document}

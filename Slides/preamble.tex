@@ -1,0 +1,195 @@
+% My packages
+\usepackage{silence}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\WarningFilter{biblatex}{Patching footnotes failed}
+\newcommand{\printpublication}[1]{\AtNextCite{\defcounter{maxnames}{99}}\fullcite{#1}}
+% \usepackage{authblk}
+% \usepackage{lmodern}
+
+\usepackage{graphicx}
+\usepackage{subfig}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage[style=ieee, citestyle=authoryear, maxcitenames=4, defernumbers=true]{biblatex}
+\usepackage[makeroom]{cancel}
+\usetikzlibrary{positioning}
+\usepackage{fancybox}
+\usepackage{mathtools}
+\usepackage{bbm}
+\usepackage{bm}
+\usepackage{subfig}
+\usepackage{ulem}
+% \AtBeginBibliography{\scriptsize}
+
+% another box
+\usepackage{empheq}
+\usepackage[most]{tcolorbox}
+
+\newtcbox{\mymath}[1][]{%
+	nobeforeafter, math upper, tcbox raise base,
+	enhanced, colframe=nusblue!30!black,
+	colback=nusorange!10, boxrule=1pt,
+  #1
+}
+
+% media
+\usepackage{multimedia}
+\usepackage{media9}
+\usepackage{animate}
+
+% citation
+\bibliography{ref}
+\setbeamertemplate{bibliography item}[article]
+\renewcommand{\footnotesize}{\tiny}
+\renewcommand\footnoterule{}
+\newcommand{\articon}{\pgfuseimage{beamericonarticle}}
+\newcommand{\bookcon}{\pgfuseimage{beamericonbook}}
+\newcommand{\urlcon}{\pgfuseimage{beamericononline}}
+
+% macros
+\def\*#1{\boldsymbol{#1}}  % boldface
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand{\QL}[1]{\textcolor{blue}{[QL: #1]}}
+
+\newcommand{\semitransp}[2][35]{\color{fg!#1}#2}
+\newcommand{\blue}[1]{{\color{blue}{#1}}}
+\newcommand{\red}[1]{{\color{red}{#1}}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\CC}{\mathbb{C}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\PP}{\mathbb{P}}
+\newcommand{\Acal}{\mathcal{A}}
+\newcommand{\Dcal}{\mathcal{D}}
+\newcommand{\Ccal}{\mathcal{C}}
+\newcommand{\Fcal}{\mathcal{F}}
+\newcommand{\Gcal}{\mathcal{G}}
+\newcommand{\Hcal}{\mathcal{H}}
+\newcommand{\Ical}{\mathcal{I}}
+\newcommand{\Lcal}{\mathcal{L}}
+\newcommand{\Ncal}{\mathcal{N}}
+\newcommand{\Pcal}{\mathcal{P}}
+\newcommand{\Rcal}{\mathcal{R}}
+\newcommand{\Scal}{\mathcal{S}}
+\newcommand{\Wcal}{\mathcal{W}}
+\newcommand{\Xcal}{\mathcal{X}}
+\newcommand{\Ycal}{\mathcal{Y}}
+\newcommand{\tp}{\top}
+\newcommand{\id}{\mathrm{id}}
+\newcommand{\smallsum}{\textstyle\sum\nolimits}
+\newcommand{\convcl}{\overline{\mathrm{Conv}}}
+\newcommand{\ind}{\mathbbm{1}}
+\newcommand{\sign}{\mathrm{Sign}}
+\newcommand{\Remp}{R_{\text{emp}}}
+\newcommand{\Rpop}{R_{\text{pop}}}
+\newcommand{\p}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\cov}{\mathrm{Cov}}
+\newcommand{\bx}{\mathbm{x}}
+\newcommand{\by}{\mathbm{y}}
+\newcommand{\bw}{\bm{w}}
+\newcommand{\wh}[1]{\hat{#1}}
+\newcommand{\wt}[1]{\tilde{#1}}
+\newcommand{\taumax}{\tau_{\mathrm{max}}}
+\newcommand{\var}{\mathrm{Var}}
+\newcommand{\bftheta}{{\boldsymbol{\theta}}}
+\newcommand{\bfphi}{\boldsymbol{\phi}}
+\newcommand{\bfx}{\boldsymbol{x}}
+\newcommand{\bfp}{\boldsymbol{p}}
+\newcommand{\Dtil}{\widetilde{\Delta}}
+
+% Tikz
+% arrows
+\usepackage{tikz}
+\usetikzlibrary{arrows,shapes}
+\tikzstyle{arrow} = [thick,->,>=stealth, line width=1.0pt]
+\tikzstyle{line} = [thick,-,>=stealth, line width=1.0pt]
+
+% flowchart
+\tikzstyle{block} = [rectangle, draw, fill=blue!10,
+text width=10em, text centered, rounded corners, minimum height=4em]
+\tikzstyle{line} = [draw, -latex']
+
+% tikz options
+\tikzstyle{every picture}+=[remember picture]
+\everymath{\displaystyle}
+
+% Chinese
+% \usepackage{CJKutf8}
+% \AtBeginDvi{\input{zhwinfonts}}
+
+
+% Footnotes
+\newcommand\blfootnote[1]{%
+  \begingroup
+  \renewcommand\thefootnote{}\footnote{#1}%
+  \addtocounter{footnote}{-1}%
+  \endgroup
+}
+
+% Presentation Specific Shorthands
+\newcommand{\Htar}{H^*}
+\newcommand{\ourpaper}{[Li, Han, E \& L, 2020]}
+
+
+% Markup
+\newcommand{\refhl}[1]{{\color{nusblue}{#1}}}
+\newcommand{\todo}[1]{{\color{orange}{[TODO: #1]}}}
+
+
+% From Overleaf Extended Abstract
+\newcommand{\Conv}{\mathop{\scalebox{1.7}{\raisebox{-0.2ex}{$\ast$}}}}%
+\newcommand{\set}[1]{\left\lbrace #1 \right\rbrace}
+
+\newcommand\blankpage{%
+    \null
+    \thispagestyle{empty}%
+    \addtocounter{page}{-1}%
+    \newpage}
+
+\newcommand{\hcnn}{{{\mathcal H}}_{\text{CNN}}}
+\newcommand{\hcnnl}{{\mathcal H}_{\text{CNN}}^{\text{$l$}}}
+\newcommand{\hrnn}{\mathcal H_{\text{RNN}}}
+\newcommand{\henc}{\mathcal H_{\text{EncDec}}}
+\newcommand{\cs}{\mathcal C}
+\newcommand\figref{Figure~\ref}
+\newcommand{\tensor}[1]{\bm{\mathcal {#1}}}
+\newcommand{\tens}[1]{%
+  \mathbin{\mathop{\otimes}\limits_{#1}}%
+}
+
+\newcommand{\rad}[1]{r(#1)}
+\newcommand{\depen}[1]{^{(#1)}}
+\newcommand{\bhh}{\bm {\hat H}}
+\newcommand{\rh}{\bm \rho\depen{\bm H}}
+\newcommand{\rhn}{\rho\depen{\bm H}}
+\newcommand{\rhh}{\bm \rho\depen{\bhh}}
+\newcommand{\ten}[1]{T_{l^K}(#1)}
+
+% \DeclareMathOperator{\C}{C}
+% \DeclareMathOperator*{\argmax}{arg\,max}
+% \DeclareMathOperator*{\argmin}{arg\,min}
+% \DeclareMathOperator*{\argsup}{arg\,sup}
+% \DeclareMathOperator*{\arginf}{arg\,inf}
+% \DeclareMathOperator{\minimize}{minimize}
+% \DeclareMathOperator{\maximize}{maximize}
+% \DeclareMathOperator{\st}{subject\,\,to}
+% \DeclareMathOperator{\erfc}{erfc}
+% \DeclareMathOperator{\diag}{diag}
+% \DeclareMathOperator{\cum}{cum}
+% \DeclareMathOperator{\sgn}{sgn}
+% \DeclareMathOperator{\tr}{tr}
+% \DeclareMathOperator{\spn}{span}
+% \DeclareMathOperator{\supp}{supp}
+% \DeclareMathOperator{\adj}{adj}
+% \DeclareMathOperator{\var}{\mathsf{Var}}
+% \DeclareMathOperator{\Vol}{Vol}
+% \DeclareMathOperator{\cov}{\mathsf{Cov}}
+% \DeclareMathOperator{\sech}{sech}
+% \DeclareMathOperator{\sinc}{sinc}
+% \DeclareMathOperator{\rank}{rank}
+% \DeclareMathOperator{\poly}{poly}
+% \DeclareMathOperator{\vect}{vec}
+% \DeclareMathOperator{\mhatten}{MHAtten}
+% \DeclareMathOperator{\ff}{FF}
