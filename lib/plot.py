@@ -1,9 +1,8 @@
-from numpy import SHIFT_DIVIDEBYZERO
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import random
 from ipywidgets import widgets
-from ipywidgets import VBox, HBox, Output, HTML
+from ipywidgets import VBox, HBox, HTML
 from math import exp
 import numpy as np
 from ml_collections import FrozenConfigDict
@@ -77,7 +76,8 @@ class DataPlotter:
         else:
             second_col = 2
         
-        plot_range = np.abs(np.array(self.input + self.output)).max()
+        plot_range = np.abs(np.array(self.input + self.output)).max()+0.2
+        # plot_range = 4
 
         fig = go.FigureWidget(make_subplots(rows=1, cols=second_col, shared_yaxes=True,subplot_titles=("Input Sequence","Output Sequence")))
         index = random.randint(0,len(self.input)-1)
@@ -100,6 +100,18 @@ class DataPlotter:
         fig.update_yaxes(range=[-plot_range, plot_range], row=1,col=self.num_of_plots)
         fig.update_layout(layout)
         
+        if self.data_name == 'shift':
+            # Add a rectangle to highlight the shifted interval
+            x = self.config.shift.LENGTH-self.config.shift.SHIFT
+            fig.add_shape(
+                type='rect', xref='x', yref='y',
+                x0=0, x1=x, y0=-plot_range+1, y1=plot_range-1, fillcolor="LightSkyBlue",opacity=0.3, line_color="LightSkyBlue"
+            , row=1,col=1)
+            fig.add_shape(
+                type='rect', xref='x', yref='y',
+                x0=self.config.shift.SHIFT, x1=self.config.shift.LENGTH, y0=-plot_range+1, y1=plot_range-1, fillcolor="LightSkyBlue",opacity=0.3, line_color="LightSkyBlue"
+            , row=1,col=2)
+
         output = widgets.Output()
         def response(b):     
             index = random.randint(0,len(self.input)-1)
