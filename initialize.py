@@ -4,7 +4,7 @@ import torch.nn as nn
 import numpy as np
 import random
 from lib.model import Module
-from lib.plot import DataPlotter
+from lib.plot import *
 from lib.utils import Dataset,train_model, inference
 from math import exp
 from lib.generator import Shift, LorenzRandFGenerator

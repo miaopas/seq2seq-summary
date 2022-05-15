@@ -7,7 +7,8 @@ import numpy as np
 import pathlib
 from tqdm import tqdm
 from lib.model import Encoder
- 
+from math import exp
+
 
 class Dataset(torch.utils.data.Dataset):
     '''
