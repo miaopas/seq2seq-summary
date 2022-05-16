@@ -24,14 +24,14 @@ class Dataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         return (self.X[idx], self.Y[idx])
 
-def train_model(name, model, train_data, test_data, epochs=1000):
-    LEARNING_RATE = 0.001
+def train_model(name, model, train_data, test_data, epochs=1000, criterion = nn.MSELoss()):
+    LEARNING_RATE = 0.01
 
-    optimizer = torch.optim.Adam(model.parameters(), lr = LEARNING_RATE)
+    optimizer = torch.optim.RMSprop(model.parameters(), lr = LEARNING_RATE)
 
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,verbose=False, cooldown=100)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,verbose=False, cooldown=4)
 
-    criterion = nn.MSELoss()
+    
 
     def epoch_time(start_time, end_time):
         elapsed_time = end_time - start_time
@@ -42,24 +42,22 @@ def train_model(name, model, train_data, test_data, epochs=1000):
 
     writer = SummaryWriter(f'runs/{name}')
     
-    CLIP = 1
     best_valid_loss = float('inf')
     best_train_loss = float('inf')
     valid_loss = float('inf')
-    # teacher_forcing = 0.5
 
-    save_every = 300
+    save_every = 1
     start_eopch = 0
     pathlib.Path(f"saved_model/{name}").mkdir(parents=True, exist_ok=True)
 
-    epoch_iterator = tqdm(range(start_eopch, epochs),bar_format='{desc}{r_bar}')
+    # epoch_iterator = tqdm(range(start_eopch, epochs),bar_format='{desc}{r_bar}')
     # writer.add_graph(model, next(iter(train_data))[0])
-    for epoch in epoch_iterator:
+    for epoch in range(start_eopch, epochs):
 
         start_time = time.time()
 
         train_loss = train(model, train_data, optimizer, criterion)
-        valid_loss = inference( model, test_data)
+        valid_loss = inference( model, test_data, criterion)
 
         train_loss = np.mean(train_loss)
         valid_loss = np.mean(valid_loss)
@@ -75,17 +73,18 @@ def train_model(name, model, train_data, test_data, epochs=1000):
             best_valid_loss = valid_loss
             torch.save(model.state_dict(), f'saved_model/{name}/best_valid.pt')
 
-        if train_loss < best_train_loss:
-            best_train_loss = train_loss
-            torch.save(model.state_dict(), f'saved_model/{name}/best_train.pt')
+        # if train_loss < best_train_loss:
+        #     best_train_loss = train_loss
+        torch.save(model.state_dict(), f'saved_model/{name}/best_train.pt')
 
         if epoch % save_every == 0:
             torch.save(model.state_dict(), f'saved_model/{name}/saved_model.pt')
 
-            
-        scheduler.step(train_loss)
+        try:
+            scheduler.step(train_loss)
+        except:
+            pass
         lr = optimizer.param_groups[0]['lr']
-        epoch_iterator.set_description(f"Train Loss: {train_loss:.3e} \t Val. Loss: {valid_loss:.3e} \t Best Loss: {best_train_loss:.3e} \t Current lr: {lr:.3e}")
         # print(f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s || Best Loss: {best_train_loss:.3e} || Current lr: {lr:.3e}')
         # print(f'\tTrain Loss: {train_loss:.3e}')
         # print(f'\t Val. Loss: {valid_loss:.3e}')
@@ -95,9 +94,9 @@ def train(model, dataset, optimizer, criterion):
     train_loss = []
     model.train()
 
-
+    epoch_iterator = tqdm(dataset)
     # iterate through batches
-    for data in dataset:
+    for i, data in enumerate(epoch_iterator):
         # Shape of _input : [batch, input_length, feature]
         # Desired input for model: [input_length, batch, feature]
         
@@ -111,8 +110,10 @@ def train(model, dataset, optimizer, criterion):
             pred = model(src)
 
         loss = criterion(pred, target)
-
-
+        # print()
+        
+        if i%30==0:
+            epoch_iterator.set_description(f" Loss: {loss.detach().item():.3e}")
 
         loss.backward()
         optimizer.step()
@@ -122,8 +123,8 @@ def train(model, dataset, optimizer, criterion):
     return train_loss
 
 
-def inference( model, dataset):
-    criterion = torch.nn.MSELoss()
+def inference( model, dataset, criterion):
+    
 
 
     val_loss = []
@@ -140,7 +141,6 @@ def inference( model, dataset):
                 pred = model(src)
 
             loss = criterion(pred, target)
-
             val_loss.append(loss.detach().item())
 
     return val_loss

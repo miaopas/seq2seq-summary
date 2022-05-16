@@ -1,6 +1,6 @@
 import imp
 import torch
-import torch.nn as nn
+from torch import nn
 import numpy as np
 import random
 from lib.model import Module

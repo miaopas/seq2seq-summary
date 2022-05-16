@@ -6,7 +6,6 @@ from ipywidgets import widgets
 from ipywidgets import VBox, HBox, HTML
 import numpy as np
 from ml_collections import FrozenConfigDict
-from pyparsing import ExceptionWordUnicode
 from lib.demoGenerator import LorenzRandFGenerator
 CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
                                                 NUM = 20,
