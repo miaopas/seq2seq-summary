@@ -8,6 +8,7 @@ import numpy as np
 import re
 import ast
 from ml_collections import FrozenConfigDict
+from pyparsing import Word
 from lib.demoGenerator import LorenzRandFGenerator
 CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
                                                 NUM = 20,
@@ -228,3 +229,40 @@ class ConvoPlotter(DataPlotter):
         self.fig.update_yaxes(range=[-plot_range_out, plot_range_out], row=1,col=self.num_of_plots)
         self.fig.update_yaxes(range=[-plot_range_in, plot_range_in], row=1,col=1)
        
+
+
+
+class TextGenerator:
+    def __init__(self) -> None:
+        from lib.word_generation import WordGeneration
+        self.model = WordGeneration.load_from_checkpoint('saved_models/wordgeneration_demo.ckpt', load_data=False)
+        self.debug = widgets.Output() 
+
+    def plot(self):
+        t1 = HTML(f' <font size="+1">Input text: </font>')
+        input_box = widgets.Text(
+                                placeholder='Type something',
+                                disabled=False,
+                                layout=widgets.Layout(width='500px', height='300px')
+                            )
+        t2 = HTML(f' <font size="+1">Output text: </font>')
+        output_box = widgets.HTML(
+                        placeholder='Waiting for input',
+                        layout=widgets.Layout(width='500px', height='300px')
+                    )
+        input_box.value = 'This is a very good'
+        output = self.model.predict(input_box.value)
+        output = '. '.join(map(lambda s: s.strip().capitalize(), output.split('.')))
+        
+        output_box.value = f' <font size="+0.4">{output+"."} </font>'
+
+
+        def on_value_change(change):
+            output = self.model.predict(change['new'])
+            output = '. '.join(map(lambda s: s.strip().capitalize(), output.split('.')))
+            
+            output_box.value = f' <font size="+0.4">{output+"."} </font>'
+                
+        input_box.observe(on_value_change, names='value')
+        output = HBox([t1, input_box,t2, output_box])
+        return VBox([output, self.debug])
