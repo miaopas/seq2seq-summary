@@ -10,6 +10,7 @@ from pytorch_lightning.strategies import DDPStrategy
 from scipy.special import softmax
 from pytorch_lightning.loggers import TensorBoardLogger
 
+import os
 
 class TextGenerationModel(pl.LightningModule):
     def __init__(self, hid_dim, num_layers):
@@ -17,22 +18,12 @@ class TextGenerationModel(pl.LightningModule):
         input_dim = output_dim = self.data_setup()
         self.rnn = nn.LSTM(input_size=input_dim, hidden_size=hid_dim, num_layers=num_layers)
         self.dense = nn.Linear(hid_dim, output_dim)
-        self.rnn.apply(self.init_weights)
-        self.dense.apply(self.init_weights)
         self.save_hyperparameters()
-
-    def init_weights(self, m):
-        for param in m._parameters.keys():
-            if 'weight' in param:
-                torch.nn.init.orthogonal_(m._parameters[param])
-            elif 'bias' in param:
-                m._parameters[param].data.fill_(0.00)
-
 
     def data_setup(self):
         data_name = 'wiki'
-        with open(f'data/{data_name}/{data_name}.txt', encoding='utf-8') as f:
-            self.text = f.read()
+        with open(f'data/{data_name}.txt', encoding='utf-8') as f:
+            self.text = f.read().lower()
 
         self.chars = sorted(list(set(self.text)))
         self.char_indices = {c: i for i, c in enumerate(self.chars)}
@@ -51,34 +42,27 @@ class TextGenerationModel(pl.LightningModule):
                 x[i, t, self.char_indices[char]] = 1
             y[i] = self.char_indices[next_chars[i]]
 
-        # import pickle
-        # with open(f'data/{data_name}/x.pkl', 'rb') as f:
-        #     x = pickle.load(f)
-        # with open(f'data/{data_name}/y.pkl', 'rb') as f:
-        #     y = pickle.load(f)
-            
-        self.dataset = TensorDataset(torch.tensor(x, dtype=torch.float32), torch.LongTensor(y))[:1000]
+        self.dataset = TensorDataset(torch.tensor(x, dtype=torch.float32), torch.LongTensor(y))
         return x.shape[-1]
 
     def forward(self, x):
-        #src = [batch size, input len, input dim]
         y = self.rnn(x)[0][:,-1,:]
         y = self.dense(y)
         output = y
         return output
 
     def configure_optimizers(self):
-        optimizer = torch.optim.RMSprop(self.parameters(), lr=1e-2)
+        optimizer = torch.optim.SGD(self.parameters(), lr=1e-5)
         return [optimizer]
 
     def training_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self(x)
         loss = nn.CrossEntropyLoss()(y_hat, y)
-        self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log("train__loss", loss, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
-    def predict(self, sentence=None, start_index=None, length=100, diversity = 0.5):
+    def predict(self, sentence=None, start_index=None, length=200, diversity = 0.5):
         def sample(preds, temperature=1.0):
             preds = np.asarray(preds).astype('float64')
             preds = np.log(preds) / temperature
@@ -113,13 +97,14 @@ class TextGenerationModel(pl.LightningModule):
 
 
     def train_dataloader(self):
-        return torch.utils.data.DataLoader(self.dataset, batch_size=128,drop_last=True, num_workers=18, pin_memory=True)
+        return torch.utils.data.DataLoader(self.dataset, batch_size=128,drop_last=True, num_workers=os.cpu_count(), pin_memory=True)
 
 
 if __name__ == "__main__":
-    model = TextGenerationModel(hid_dim=128, num_layers=1)
+    model = TextGenerationModel(hid_dim=256, num_layers=1)
+    
 
-    # model = TextGenerationModel.load_from_checkpoint('runs/text_generation/version_0/checkpoints/epoch=29-step=21780.ckpt')
+    model = TextGenerationModel.load_from_checkpoint('checkpoints/Text-epoch=113-train__loss_epoch=1.74.ckpt')
 
 
 
@@ -127,11 +112,12 @@ if __name__ == "__main__":
     #                 max_epochs=300,
     #                 precision=32,
     #                 logger=TensorBoardLogger("runs", name="text_generation"))
-
+    checkpoint_callback = ModelCheckpoint(dirpath="checkpoints", save_top_k=4, monitor="train__loss_epoch",filename="Text-{epoch:02d}-{train__loss_epoch:.2f}")
     trainer = Trainer(accelerator="gpu", devices=1,
                 max_epochs=300,
                 precision=32,
-                logger=TensorBoardLogger("runs", name="text_generation"))
-
+                logger=TensorBoardLogger("runs", name="text_generation"),
+                callbacks=[checkpoint_callback])
+    # print(trainer.callback_metrics)
     trainer.fit(model=model)
 

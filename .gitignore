@@ -4,3 +4,4 @@ runs/
 temp.ipynb
 env
 .data/
+checkpoints

@@ -96,11 +96,12 @@ class DataPlotter:
             self.fig.data[1].y = self.output[index]
 
 class ShiftPlotter(DataPlotter):
-    def __init__(self):
+    def __init__(self, k=30):
+        self.shift = k
         input, output = self._generate_data()
         super().__init__(input=input, output=output, num_of_plots=2, 
                         title='Shift Seqeunce:',
-                        descrip=f'Shift the input to the right by {CONFIG.shift.SHIFT} timesteps.',
+                        descrip=f'Shift the input to the right by {self.shift} timesteps.',
                         subplot_title=('Input Sequence', 'Output Sequence'), )
     
     def _generate_gaussian(self, seq_length):
@@ -119,14 +120,14 @@ class ShiftPlotter(DataPlotter):
         vbox = super().plot()
         fig = vbox.children[1]
         range = fig['layout'].yaxis.range[1]+0.2
-        x = CONFIG.shift.LENGTH-CONFIG.shift.SHIFT
+        x = CONFIG.shift.LENGTH-self.shift
         fig.add_shape(
             type='rect', xref='x', yref='y',
             x0=0, x1=x, y0=-range+1, y1=range-1, fillcolor="LightSkyBlue",opacity=0.3, line_color="LightSkyBlue"
         , row=1,col=1)
         fig.add_shape(
             type='rect', xref='x', yref='y',
-            x0=CONFIG.shift.SHIFT, x1=CONFIG.shift.LENGTH, y0=-range+1, y1=range-1, fillcolor="LightSkyBlue",opacity=0.3, line_color="LightSkyBlue"
+            x0=self.shift, x1=CONFIG.shift.LENGTH, y0=-range+1, y1=range-1, fillcolor="LightSkyBlue",opacity=0.3, line_color="LightSkyBlue"
         , row=1,col=2)
         return vbox
 
@@ -136,7 +137,7 @@ class ShiftPlotter(DataPlotter):
         for _ in range(CONFIG.shift.NUM):
             data = self._generate_gaussian(CONFIG.shift.LENGTH)
             input.append(data)
-            output.append(np.concatenate((np.zeros(CONFIG.shift.SHIFT), data[:-CONFIG.shift.SHIFT])))
+            output.append(np.concatenate((np.zeros(self.shift), data[:-self.shift])))
         return input, output
 
 class LorentzPlotter(DataPlotter):
