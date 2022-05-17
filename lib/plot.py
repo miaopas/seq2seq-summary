@@ -6,6 +6,8 @@ from ipywidgets import widgets
 from ipywidgets import VBox, HBox, HTML
 import numpy as np
 import re
+import os
+from pathlib import Path
 import ast
 from ml_collections import FrozenConfigDict
 from pyparsing import Word
@@ -46,7 +48,8 @@ class DataPlotter:
         self.debug = widgets.Output() 
         if num_of_plots not in (1,2):
             raise Exception('Can only have 1 or 2 plots')
-        
+        self.trace1_name = 'Input'
+        self.trace2_name = 'Output'
 
     def plot(self):
         descrip = HTML(f' <font size="+1"><b>{self.title}</b> {self.descrip} </font>')
@@ -69,11 +72,11 @@ class DataPlotter:
         input, output = self.input[index], self.output[index] 
 
         self.fig.add_trace(
-            go.Scatter(y=input, name='Input'),
+            go.Scatter(y=input, name=self.trace1_name),
             row=1, col=1
         )
         self.fig.add_trace(
-            go.Scatter(y=output, name='Output'),
+            go.Scatter(y=output, name=self.trace2_name),
             row=1, col=self.num_of_plots
         )    
         layout = go.Layout(
@@ -266,3 +269,42 @@ class TextGenerator:
         input_box.observe(on_value_change, names='value')
         output = HBox([t1, input_box,t2, output_box])
         return VBox([output, self.debug])
+
+
+class ModelEvaluation(DataPlotter):
+
+    def __init__(self, model, path, title='', descrip='') -> None:
+        
+        input, output = self._generate_data()
+
+        super().__init__(input, output, num_of_plots=1, title=title, descrip=descrip)
+
+    def _generate_data(self):
+        raise NotImplementedError
+
+class LorentzEvaluation(ModelEvaluation):
+
+    def __init__(self, model, path, title='Lorentz System') -> None:
+        self.model = model
+        self.path = path
+        K, J, length= map(lambda x:int(x), Path(self.path).stem.split('_')[1:])
+        descrip = f'K = {K}, J = {J}, Length = {length}.'
+        self.lorentz_generator = LorenzRandFGenerator({'data_num': 20 ,'n_init':20, 
+                                                    'K':K, 
+                                                    'J':J,
+                                                    'path_len':length})
+
+        super().__init__(model, path, title=title, descrip=descrip)
+
+        self.trace1_name = 'Output'
+        self.trace2_name = 'Prediction'
+
+    def _generate_data(self):
+            
+        input, output = self.lorentz_generator.generate()
+        model = self.model.load_from_checkpoint(self.path)
+        pred = model.predict(input)
+
+        # if have multiple dim, only return first dim
+        return output[:,:,0], pred[:,:,0]
+

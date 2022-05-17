@@ -4,11 +4,13 @@ from torch import nn
 import numpy as np
 import random
 from lib.model import Module
+# from lib.shift_seq import LorentzModel
 from lib.plot import *
 from lib.utils import Dataset,train_model, inference
 from math import exp
 from lib.generator import Shift, LorenzRandFGenerator
 from lib import *
+from lib.plot import LorentzEvaluation
 from torch.utils.data import TensorDataset
 SEED = 1234
 DTYPE = torch.float64
