@@ -9,7 +9,7 @@ from lib.utils import Dataset,train_model, inference
 from math import exp
 from lib.generator import Shift, LorenzRandFGenerator
 from lib import *
-
+from torch.utils.data import TensorDataset
 SEED = 1234
 DTYPE = torch.float64
 random.seed(SEED)
