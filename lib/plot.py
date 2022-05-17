@@ -5,11 +5,16 @@ import random
 from ipywidgets import widgets
 from ipywidgets import VBox, HBox, HTML
 import numpy as np
+import re
+import ast
 from ml_collections import FrozenConfigDict
 from lib.demoGenerator import LorenzRandFGenerator
 CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
                                                 NUM = 20,
                                                 SHIFT = 30),
+                            'convo': dict(LENGTH = 100,
+                                                NUM = 20,
+                                                FILTER = [0.002, 0.022, 0.097, 0.159, 0.097, 0.022, 0.002]),
                                 'lorentz': dict(NUM = 10, 
                                                 K=1, J=10, 
                                                 LENGTH=128 )})
@@ -37,13 +42,13 @@ class DataPlotter:
         self.descrip = descrip
         self.title = title
         self.subplot_title = subplot_title
-        
+        self.debug = widgets.Output() 
         if num_of_plots not in (1,2):
             raise Exception('Can only have 1 or 2 plots')
         
 
     def plot(self):
-        descrip = HTML(f' <font size="+1"><b>{self.title}:</b> {self.descrip} </font>')
+        descrip = HTML(f' <font size="+1"><b>{self.title}</b> {self.descrip} </font>')
         button = widgets.Button(description="Refresh")
         box_layout = widgets.Layout(display='flex',
                         flex_flow='column',
@@ -56,44 +61,45 @@ class DataPlotter:
         plot_range_out = np.abs(np.array(self.output)).max()+0.2
           
         # Setup subplots, if only have 1 plots then input and output are together on col1.
-        fig = go.FigureWidget(make_subplots(rows=1, cols=self.num_of_plots, shared_yaxes=False,subplot_titles=self.subplot_title))
+        self.fig = go.FigureWidget(make_subplots(rows=1, cols=self.num_of_plots, shared_yaxes=False,subplot_titles=self.subplot_title))
         
         # Randomly choose one input,output pair to plot.
         index = random.randint(0,len(self.input)-1)
         input, output = self.input[index], self.output[index] 
 
-        fig.add_trace(
+        self.fig.add_trace(
             go.Scatter(y=input, name='Input'),
             row=1, col=1
         )
-        fig.add_trace(
+        self.fig.add_trace(
             go.Scatter(y=output, name='Output'),
             row=1, col=self.num_of_plots
         )    
         layout = go.Layout(
             margin=dict(t=25),
         )
-        fig.update_yaxes(range=[-plot_range_out, plot_range_out], row=1,col=self.num_of_plots)
-        fig.update_yaxes(range=[-plot_range_in, plot_range_in], row=1,col=1)
-        fig.update_layout(layout)
+        self.fig.update_yaxes(range=[-plot_range_out, plot_range_out], row=1,col=self.num_of_plots)
+        self.fig.update_yaxes(range=[-plot_range_in, plot_range_in], row=1,col=1)
+        self.fig.update_layout(layout)
         
 
         # Click event for button
-        def response(b):     
-            index = random.randint(0,len(self.input)-1)
-            with fig.batch_update():
-                fig.data[0].y = self.input[index]
-                fig.data[1].y = self.output[index]
-        button.on_click(response)
+        
+        button.on_click(self.response)
         container = HBox([box, descrip])
-        return VBox([container,fig])
+        return VBox([container,self.fig])
 
+    def response(self, b):     
+        index = random.randint(0,len(self.input)-1)
+        with self.fig.batch_update():
+            self.fig.data[0].y = self.input[index]
+            self.fig.data[1].y = self.output[index]
 
 class ShiftPlotter(DataPlotter):
     def __init__(self):
         input, output = self._generate_data()
         super().__init__(input=input, output=output, num_of_plots=2, 
-                        title='Shift Seqeunce',
+                        title='Shift Seqeunce:',
                         descrip=f'Shift the input to the right by {CONFIG.shift.SHIFT} timesteps.',
                         subplot_title=('Input Sequence', 'Output Sequence'), )
     
@@ -137,7 +143,7 @@ class LorentzPlotter(DataPlotter):
     def __init__(self):
         input, output = self._generate_data()
         super().__init__(input=input, output=output, num_of_plots=1, 
-                        title=f'Lorentz System',
+                        title=f'Lorentz System:',
                         descrip=f'The output is the response of input defined by the Lorentz96 system.',
                         subplot_title=('Intput/Output Sequences',''), )
     
@@ -150,3 +156,74 @@ class LorentzPlotter(DataPlotter):
         input, output = lorentz_generator.generate(scale=False)
 
         return input.squeeze(-1)[:,1:], output.squeeze(-1)[:,1:]
+
+
+
+class ConvoPlotter(DataPlotter):
+    def __init__(self):
+        self.filter = CONFIG.convo.FILTER
+        input, output = self._generate_data()
+        super().__init__(input=input, output=output, num_of_plots=2, 
+                        title='&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Convolution of sequence with a filter',
+                        descrip=f'',
+                        subplot_title=('Input Sequence', 'Output Sequence'), )
+    
+    def _generate_gaussian(self, seq_length):
+        def rbf_kernel(x1, x2, variance = 1):
+            from math import exp
+            return exp(-1 * ((x1-x2) ** 2) / (2*variance))
+        def gram_matrix(xs):
+            return [[rbf_kernel(x1,x2) for x2 in xs] for x1 in xs]
+        xs = np.arange(seq_length)*0.1
+        mean = [0 for _ in xs]
+        gram = gram_matrix(xs)
+        ys = np.random.multivariate_normal(mean, gram)
+        return ys
+    
+    def plot(self):
+        vbox = super().plot()
+        hbox = vbox.children[0]
+        range = self.fig['layout'].yaxis.range[1]+0.2
+        self.filter_box = widgets.Text(
+                        value=str(CONFIG.convo.FILTER)[1:-1],
+                        placeholder='Enter a filter',
+                        description='Filter:',
+                        disabled=False,
+                        layout = widgets.Layout(width='400px')
+                    )
+        button =  hbox.children[0].children[0]
+        descp = hbox.children[1]
+        new_hbox = HBox([self.filter_box,button, descp])
+        new_vbox = VBox([new_hbox, self.fig,self.debug])
+        return new_vbox
+
+    def _generate_data(self):
+        input = []
+        output = []
+        for _ in range(CONFIG.convo.NUM):
+            data = self._generate_gaussian(CONFIG.convo.LENGTH)
+            data = 2*np.random.random(CONFIG.convo.LENGTH)-1
+            input.append(data)
+            output.append(np.convolve(data, self.filter, mode='same'))
+        return input, output
+
+    def response(self, b):
+        raw_filter = re.sub(r"[^0-9.-]+", ", ", self.filter_box.value) 
+
+        
+        #If filter changed then update data
+        if list(self.filter) != ast.literal_eval('[' + raw_filter + ']'):
+            self.filter = ast.literal_eval('[' + raw_filter + ']')
+            self.filter_box.value = raw_filter
+            self.input, self.output = self._generate_data()
+
+        index = random.randint(0,len(self.input)-1)
+        with self.fig.batch_update():
+            self.fig.data[0].y = self.input[index]
+            self.fig.data[1].y = self.output[index]
+        
+        plot_range_in = np.abs(np.array(self.input)).max()+0.2
+        plot_range_out = np.abs(np.array(self.output)).max()+0.2
+        self.fig.update_yaxes(range=[-plot_range_out, plot_range_out], row=1,col=self.num_of_plots)
+        self.fig.update_yaxes(range=[-plot_range_in, plot_range_in], row=1,col=1)
+       
