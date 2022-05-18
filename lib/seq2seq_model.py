@@ -10,7 +10,7 @@ from scipy.special import softmax
 from pytorch_lightning.loggers import TensorBoardLogger
 import os
 from lib.lfgenerator import LorenzRandFGenerator
-
+from lib.tcn import TemporalConvNet
 
 from ml_collections import FrozenConfigDict
 CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
@@ -22,7 +22,6 @@ CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
                                 'lorentz': dict(NUM = 10, 
                                                 K=1, J=10, 
                                                 LENGTH=32 ), 'train_size':49500, 'valid_size': 500})
-
 
 
 class ShiftDataset(torch.utils.data.Dataset):
@@ -59,46 +58,6 @@ class ShiftDataset(torch.utils.data.Dataset):
         return ys
 
 
-# class ShiftSequenceModel(pl.LightningModule):
-#     def __init__(self, hid_dim, num_layers):
-#         super().__init__() 
-#         input_dim = output_dim = 1
-#         self.rnn = nn.LSTM(input_size=input_dim, hidden_size=hid_dim, num_layers=num_layers)
-#         self.dense = nn.Linear(hid_dim, output_dim)
-#         self.save_hyperparameters()
-
-
-#     def forward(self, x):
-#         y = self.rnn(x)[0]
-#         y = self.dense(y)
-#         output = y
-#         return output
-
-    
-#     def configure_optimizers(self):
-#         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-#         return [optimizer]
-
-#     def training_step(self, batch, batch_idx):
-#         x, y = batch
-#         y_hat = self(x)
-#         trainloss = nn.MSELoss()(y_hat, y)
-#         self.log("train_loss", trainloss, on_epoch=True, prog_bar=True, logger=True)
-#         return trainloss
-
-#     def validation_step(self, batch, batch_idx):
-#         x, y = batch
-#         y_hat = self(x)
-#         validloss = nn.MSELoss()(y_hat, y)
-#         self.log("valid_loss", validloss, prog_bar=True, logger=True)
-#         return validloss
-
-#     def predict(self, x):
-#         x = torch.tensor(x, dtype=torch.float32).unsqueeze(-1)
-#         pred = self(x)
-#         return pred.squeeze(-1).detach().cpu().numpy()
-
-
 class Seq2SeqModel(pl.LightningModule):
     def __init__(self):
         super().__init__() 
@@ -111,11 +70,11 @@ class Seq2SeqModel(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-5)
         scheduler = {
-                                    "scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer), 
-                                    "interval": "epoch",
-                                    "frequency": 1,
-                                    "monitor": "train_loss_epoch"
-                                }
+                        "scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer), 
+                        "interval": "epoch",
+                        "frequency": 1,
+                        "monitor": "train_loss_epoch"
+                    }
         return {"optimizer": optimizer, "lr_scheduler":scheduler}
 
     def training_step(self, batch, batch_idx):
@@ -143,7 +102,6 @@ class RNNModel(Seq2SeqModel):
         super().__init__()
         self.rnn = nn.LSTM(input_size=input_dim, hidden_size=hid_dim, num_layers=num_layers)
         self.dense = nn.Linear(hid_dim, output_dim)
-        self.save_hyperparameters()
 
     def forward(self, x):
         y = self.rnn(x)[0]
@@ -151,7 +109,23 @@ class RNNModel(Seq2SeqModel):
         output = y
         return output
 
+class TCNModel(Seq2SeqModel):
+    def __init__(self, input_size, output_size, num_channels, kernel_size, dropout):
+        super(TCNModel, self).__init__()
+        self.tcn = TemporalConvNet(input_size, num_channels, kernel_size=kernel_size, dropout=dropout)
+        self.linear = nn.Linear(num_channels[-1], output_size)
+        self.init_weights()
 
+    def init_weights(self):
+        self.linear.weight.data.normal_(0, 0.01)
+
+    def forward(self, x):
+        if len(x.shape) ==2:
+            x = x.unsqueeze(0)
+        x = x.permute(0,2,1)
+        y1 = self.tcn(x)
+        y1 = y1.permute(0,2,1)
+        return self.linear(y1)
 
 
 if __name__ == "__main__":
@@ -174,22 +148,6 @@ if __name__ == "__main__":
     #             callbacks=[checkpoint_callback])
     # # print(trainer.callback_metrics)
     # trainer.fit(model=model)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

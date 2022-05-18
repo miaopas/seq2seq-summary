@@ -108,7 +108,7 @@ class DCN(Module):
         x = x.permute(0,2,1)
 
         for layer in self.conv_layers:
-            x = x + layer(x)[:,:,:length]
+            x = x + self.activation(layer(x)[:,:,:length])
        
         x = x.permute(0,2,1)
 

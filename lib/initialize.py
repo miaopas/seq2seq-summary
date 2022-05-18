@@ -4,7 +4,7 @@ from torch import nn
 import numpy as np
 import random
 from lib.layers import Module
-from lib.seq2seq_model import RNNModel
+from lib.seq2seq_model import RNNModel, TCNModel
 from lib.text_generating_model import TextGeneration, WordGeneration
 from lib.plot import *
 from lib.utils import Dataset,train_model, inference
