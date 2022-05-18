@@ -11,7 +11,7 @@ from pathlib import Path
 import ast
 from ml_collections import FrozenConfigDict
 from pyparsing import Word
-from lib.demoGenerator import LorenzRandFGenerator
+from lib.lfgenerator import LorenzRandFGenerator
 CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
                                                 NUM = 20,
                                                 SHIFT = 30),
@@ -237,7 +237,7 @@ class ConvoPlotter(DataPlotter):
 
 class TextGenerator:
     def __init__(self) -> None:
-        from lib.word_generation import WordGeneration
+        from lib.text_generating_model import WordGeneration
         self.model = WordGeneration.load_from_checkpoint('saved_models/wordgeneration_demo.ckpt', load_data=False)
         self.debug = widgets.Output() 
 

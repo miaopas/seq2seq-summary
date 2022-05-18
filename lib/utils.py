@@ -6,7 +6,7 @@ import time
 import numpy as np
 import pathlib
 from tqdm import tqdm
-from lib.model import Encoder
+from lib.layers import Encoder
 from math import exp
 
 

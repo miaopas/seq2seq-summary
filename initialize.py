@@ -3,7 +3,7 @@ import torch
 from torch import nn
 import numpy as np
 import random
-from lib.model import Module
+from lib.layers import Module
 # from lib.shift_seq import LorentzModel
 from lib.plot import *
 from lib.utils import Dataset,train_model, inference
@@ -12,8 +12,9 @@ from lib.generator import Shift, LorenzRandFGenerator
 from lib import *
 from lib.plot import LorentzEvaluation
 from torch.utils.data import TensorDataset
+
 SEED = 1234
-DTYPE = torch.float64
+DTYPE = torch.float32
 random.seed(SEED)
 np.random.seed(SEED)
 torch.manual_seed(SEED)

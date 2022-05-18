@@ -78,9 +78,6 @@ class TextGenerationModel(pl.LightningModule):
             start_index = np.random.randint(0, len(self.text)-self.maxlen)
         if sentence is None:
             sentence = self.text[start_index: start_index + self.maxlen]
-        # else:
-        #     # assert len(sentence) > self.maxlen, f'Need at least {self.maxlen} characters to start'
-        #     sentence = sentence[:self.maxlen]
         sentence=sentence.lower()
         generated += sentence
         for i in range(length):
