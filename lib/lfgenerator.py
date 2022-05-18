@@ -375,3 +375,37 @@ class LorenzRandFGenerator(LorenzConstFGenerator):
         if self.config['only_terminal']:
             outputs = outputs[:, -1, :]
         return inputs, outputs
+
+
+class ShiftGenerator:
+
+    def __init__(self, size, shift, length, norm=5) -> None:
+        self.size = size
+        self.shift = shift
+        self.length = length
+        self.norm = norm
+
+    def generate(self):
+        input = []
+        output = []
+        for _ in range(self.size):
+            data = self._generate_gaussian(self.length)
+            input.append(data)
+            output.append(np.concatenate((np.zeros(self.shift), data[:-self.shift])))
+
+        input = np.array(input)[:,:,np.newaxis]
+        output = np.array(output)[:,:,np.newaxis]
+
+        return input /self.norm, output/self.norm
+
+    def _generate_gaussian(self, seq_length):
+        def rbf_kernel(x1, x2, variance = 1):
+            from math import exp
+            return exp(-1 * ((x1-x2) ** 2) / (2*variance))
+        def gram_matrix(xs):
+            return [[rbf_kernel(x1,x2) for x2 in xs] for x1 in xs]
+        xs = np.arange(seq_length)*0.1
+        mean = [0 for _ in xs]
+        gram = gram_matrix(xs)
+        ys = np.random.multivariate_normal(mean, gram)
+        return ys

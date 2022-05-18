@@ -10,6 +10,7 @@ import ast
 from ml_collections import FrozenConfigDict
 from lib.lfgenerator import LorenzRandFGenerator
 from lib.text_generating_model import WordGeneration, TextGeneration
+from lib.lfgenerator import ShiftGenerator
 
 CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
                                         NUM = 20,
@@ -373,3 +374,25 @@ class LorentzEvaluation(ModelEvaluation):
         # if have multiple dim, only return first dim
         return output[:,:,0], pred[:,:,0]
 
+class ShiftEvaluation(ModelEvaluation):
+
+    def __init__(self, model, path, title='Shift Sequence') -> None:
+        self.model = model
+        self.path = path
+        shift, length= map(lambda x:int(x), Path(self.path).stem.split('_')[1:])
+        descrip = f'Shift = {shift}, Length = {length}.'
+        self.generator = ShiftGenerator(size=20,shift=shift,length=length)
+
+        super().__init__(model, path, title=title, descrip=descrip)
+
+        self.trace1_name = 'Output'
+        self.trace2_name = 'Prediction'
+
+    def _generate_data(self):
+            
+        input, output = self.generator.generate()
+        model = self.model.load_from_checkpoint(self.path)
+        pred = model.predict(input)
+
+        # if have multiple dim, only return first dim
+        return output[:,:,0], pred[:,:,0]

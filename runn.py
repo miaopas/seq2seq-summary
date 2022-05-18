@@ -109,12 +109,12 @@ class Seq2SeqModel(pl.LightningModule):
         pass
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-5)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         scheduler = {
-                                    "scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer), 
-                                    "interval": "epoch",
-                                    "frequency": 1,
-                                    "monitor": "train_loss_epoch"
+                        "scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer), 
+                        "interval": "epoch",
+                        "frequency": 1,
+                        "monitor": "train_loss_epoch"
                                 }
         return {"optimizer": optimizer, "lr_scheduler":scheduler}
 
@@ -204,7 +204,7 @@ if __name__ == "__main__":
 
 
     import pickle
-    with open('resources/data/shift/shift_8_32.pkl', 'rb') as f:
+    with open('resources/data/shift/shift_32_128.pkl', 'rb') as f:
         input, output = pickle.load( f)
     input = input[:CONFIG.train_size+CONFIG.valid_size]
     output = output[:CONFIG.train_size+CONFIG.valid_size]
