@@ -1,19 +1,19 @@
 import pytorch_lightning as pl
 import torch.nn.functional as F
-from initialize import *
+import torch
 from pytorch_lightning import Trainer
-import sys
 from torch import nn
 from pytorch_lightning.callbacks import ModelCheckpoint
-# print(sys.executable)
 from pytorch_lightning.strategies import DDPStrategy
 from scipy.special import softmax
+from torch.utils.data import TensorDataset
 from pytorch_lightning.loggers import TensorBoardLogger
+import numpy as np
 
 import os
 
-class TextGenerationModel(pl.LightningModule):
-    def __init__(self, hid_dim, num_layers, load_data):
+class TextGeneration(pl.LightningModule):
+    def __init__(self, hid_dim, num_layers, load_data=False):
         super().__init__() 
         self.load_data = load_data
         input_dim = output_dim = self.data_setup()
@@ -23,29 +23,31 @@ class TextGenerationModel(pl.LightningModule):
 
     def data_setup(self):
         data_name = 'wiki'
-        with open(f'data/{data_name}.txt', encoding='utf-8') as f:
+        with open(f'resources/data/text/{data_name}.txt', encoding='utf-8') as f:
             self.text = f.read().lower()
 
         self.chars = sorted(list(set(self.text)))
         self.char_indices = {c: i for i, c in enumerate(self.chars)}
         self.indices_char = {i: c for i, c in enumerate(self.chars)}
-        self.maxlen = 100
-        step = 5
-        sentences = []
-        next_chars = []
-        for i in range(0, len(self.text) - self.maxlen, step):
-            sentences.append(self.text[i: i + self.maxlen])
-            next_chars.append(self.text[i + self.maxlen])
 
-        x = np.zeros((len(sentences), self.maxlen, len(self.chars)), dtype=bool)
-        y = np.zeros(len(sentences))
-        for i, sentence in enumerate(sentences):
-            for t, char in enumerate(sentence):
-                x[i, t, self.char_indices[char]] = 1
-            y[i] = self.char_indices[next_chars[i]]
+        if self.data_setup:
+            self.maxlen = 100
+            step = 5
+            sentences = []
+            next_chars = []
+            for i in range(0, len(self.text) - self.maxlen, step):
+                sentences.append(self.text[i: i + self.maxlen])
+                next_chars.append(self.text[i + self.maxlen])
 
-        self.dataset = TensorDataset(torch.tensor(x, dtype=torch.float32), torch.LongTensor(y))
-        return x.shape[-1]
+            x = np.zeros((len(sentences), self.maxlen, len(self.chars)), dtype=bool)
+            y = np.zeros(len(sentences))
+            for i, sentence in enumerate(sentences):
+                for t, char in enumerate(sentence):
+                    x[i, t, self.char_indices[char]] = 1
+                y[i] = self.char_indices[next_chars[i]]
+
+            self.dataset = TensorDataset(torch.tensor(x, dtype=torch.float32), torch.LongTensor(y))
+        return len(self.chars)
 
     def forward(self, x):
         y = self.rnn(x)[0][:,-1,:]
@@ -100,7 +102,7 @@ class TextGenerationModel(pl.LightningModule):
         return torch.utils.data.DataLoader(self.dataset, batch_size=128,drop_last=True, num_workers=os.cpu_count(), pin_memory=True)
 
 
-class WordGeneration(TextGenerationModel):
+class WordGeneration(TextGeneration):
     def __init__(self, hid_dim, num_layers, load_data=True):
         super().__init__(hid_dim, num_layers, load_data)
 
@@ -108,7 +110,7 @@ class WordGeneration(TextGenerationModel):
         from collections import Counter, defaultdict
         import numpy as np
         data_name = 'wiki'
-        with open(f'data/{data_name}.txt', encoding='utf-8') as f:
+        with open(f'resources/data/text/{data_name}.txt', encoding='utf-8') as f:
             text = f.read().lower()
         text = list(filter(lambda x: x!='', text.split(' ')))
         self.chars = {word for word, count in Counter(text).items() if count >=80}
@@ -168,10 +170,10 @@ class WordGeneration(TextGenerationModel):
 
 
 if __name__ == "__main__":
-    # model = TextGenerationModel(hid_dim=256, num_layers=1)
+    # model = TextGeneration(hid_dim=256, num_layers=1)
     
 
-    # model = TextGenerationModel.load_from_checkpoint('checkpoints/Text-epoch=113-train__loss_epoch=1.74.ckpt')
+    # model = TextGeneration.load_from_checkpoint('checkpoints/Text-epoch=113-train__loss_epoch=1.74.ckpt')
 
 
 
@@ -190,7 +192,7 @@ if __name__ == "__main__":
 
 
 
-    model = WordLevelTextGenerationModel(hid_dim=256, num_layers=1)
+    model = WordLevelTextGeneration(hid_dim=256, num_layers=1)
 
     checkpoint_callback = ModelCheckpoint(dirpath="checkpoints", save_top_k=4, monitor="train__loss_epoch",filename="TextWord-{epoch:02d}-{train__loss_epoch:.2f}")
     trainer = Trainer(accelerator="gpu", devices=1,

@@ -1,4 +1,3 @@
-import imp
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import random
@@ -6,21 +5,21 @@ from ipywidgets import widgets
 from ipywidgets import VBox, HBox, HTML
 import numpy as np
 import re
-import os
 from pathlib import Path
 import ast
 from ml_collections import FrozenConfigDict
-from pyparsing import Word
 from lib.lfgenerator import LorenzRandFGenerator
+from lib.text_generating_model import WordGeneration, TextGeneration
+
 CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
-                                                NUM = 20,
-                                                SHIFT = 30),
+                                        NUM = 20,
+                                        SHIFT = 30),
                             'convo': dict(LENGTH = 100,
-                                                NUM = 20,
-                                                FILTER = [0.002, 0.022, 0.097, 0.159, 0.097, 0.022, 0.002]),
-                                'lorentz': dict(NUM = 10, 
-                                                K=1, J=10, 
-                                                LENGTH=128 )})
+                                        NUM = 20,
+                                        FILTER = [0.002, 0.022, 0.097, 0.159, 0.097, 0.022, 0.002]),
+                            'lorentz': dict(NUM = 10, 
+                                            K=1, J=10, 
+                                            LENGTH=128 )})
 class DataPlotter:
 
     """
@@ -52,14 +51,23 @@ class DataPlotter:
         self.trace2_name = 'Output'
 
     def plot(self):
-        descrip = HTML(f' <font size="+1"><b>{self.title}</b> {self.descrip} </font>')
-        button = widgets.Button(description="Refresh")
-        box_layout = widgets.Layout(display='flex',
+        button_layout = widgets.Layout(
+                        width='20%',
+                        )
+        text_layout = widgets.Layout(display='flex',
+                flex_flow='column',
+                align_items='center',
+                width='60%')
+        emptybox_layout = widgets.Layout(display='flex',
                         flex_flow='column',
                         align_items='center',
-                        width='24%')
-        box = widgets.HBox(children=[button],layout=box_layout)
-
+                        width='20%')              
+        descrip = HTML(f' <font size="+1"><b>{self.title}</b> {self.descrip} </font>')
+        button = widgets.Button(description="Refresh")
+        
+        button_box = widgets.HBox([HTML('&nbsp;'*5), button],layout=button_layout)
+        descrip_box = widgets.HBox([descrip], layout=text_layout)
+        empty_box = widgets.HBox([HTML()], layout=emptybox_layout)
         # Calculate range of plot.
         plot_range_in = np.abs(np.array(self.input)).max()+0.2
         plot_range_out = np.abs(np.array(self.output)).max()+0.2
@@ -78,19 +86,32 @@ class DataPlotter:
         self.fig.add_trace(
             go.Scatter(y=output, name=self.trace2_name),
             row=1, col=self.num_of_plots
-        )    
-        layout = go.Layout(
-            margin=dict(t=25),
-        )
+        )  
+
+        # Do not show lengend if have two seperate plots
+        self.fig.update_layout(showlegend=False)
+        
+        if self.num_of_plots == 1:
+            self.fig.update_layout(showlegend=True)
+            self.fig.update_layout(legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="left",
+                x=0,
+                font_size=17
+            ))
+        self.fig.update_layout(font_size=15)
+        self.fig.update_annotations(font_size=18)
         self.fig.update_yaxes(range=[-plot_range_out, plot_range_out], row=1,col=self.num_of_plots)
         self.fig.update_yaxes(range=[-plot_range_in, plot_range_in], row=1,col=1)
-        self.fig.update_layout(layout)
+        self.fig.update_layout(margin=dict(l=0,t=35),)
         
 
         # Click event for button
         
         button.on_click(self.response)
-        container = HBox([box, descrip])
+        container = HBox([button_box, descrip_box,empty_box])
         return VBox([container,self.fig])
 
     def response(self, b):     
@@ -148,7 +169,7 @@ class LorentzPlotter(DataPlotter):
     def __init__(self):
         input, output = self._generate_data()
         super().__init__(input=input, output=output, num_of_plots=1, 
-                        title=f'Lorentz System:',
+                        title=f'',
                         descrip=f'The output is the response of input defined by the Lorentz96 system.',
                         subplot_title=('Intput/Output Sequences',''), )
     
@@ -163,13 +184,12 @@ class LorentzPlotter(DataPlotter):
         return input.squeeze(-1)[:,1:], output.squeeze(-1)[:,1:]
 
 
-
 class ConvoPlotter(DataPlotter):
     def __init__(self):
         self.filter = CONFIG.convo.FILTER
         input, output = self._generate_data()
         super().__init__(input=input, output=output, num_of_plots=2, 
-                        title='&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Convolution of sequence with a filter',
+                        title='Convolution of sequence with a filter',
                         descrip=f'',
                         subplot_title=('Input Sequence', 'Output Sequence'), )
     
@@ -196,10 +216,29 @@ class ConvoPlotter(DataPlotter):
                         disabled=False,
                         layout = widgets.Layout(width='400px')
                     )
-        button =  hbox.children[0].children[0]
-        descp = hbox.children[1]
-        new_hbox = HBox([self.filter_box,button, descp])
-        new_vbox = VBox([new_hbox, self.fig,self.debug])
+        button =  hbox.children[0].children[1]
+        descrip = hbox.children[1].children[0]
+
+        button_layout = widgets.Layout(
+                        width='35%',
+                        )
+        text_layout = widgets.Layout(display='flex',
+                flex_flow='column',
+                align_items='center',
+                width='30%')
+        emptybox_layout = widgets.Layout(display='flex',
+                        flex_flow='column',
+                        align_items='center',
+                        width='35%')      
+
+        button_box = widgets.HBox([self.filter_box, button],layout=button_layout)
+        descrip_box = widgets.HBox([descrip], layout=text_layout)
+        empty_box = widgets.HBox([HTML()], layout=emptybox_layout)
+
+        hbox = HBox([button_box,descrip_box, empty_box])
+        
+
+        new_vbox = VBox([hbox, self.fig,self.debug])
         return new_vbox
 
     def _generate_data(self):
@@ -234,41 +273,66 @@ class ConvoPlotter(DataPlotter):
        
 
 
-
 class TextGenerator:
+    
+
     def __init__(self) -> None:
-        from lib.text_generating_model import WordGeneration
-        self.model = WordGeneration.load_from_checkpoint('saved_models/wordgeneration_demo.ckpt', load_data=False)
+        self.wordmodel = WordGeneration.load_from_checkpoint('resources/saved_models/text/wordgeneration_demo.ckpt', load_data=False)
+        self.charmodel = TextGeneration.load_from_checkpoint('resources/saved_models/text/text_generation_demo.ckpt', load_data=False)
+        
+        self.model = self.charmodel
+        self.length = 600
+
         self.debug = widgets.Output() 
 
     def plot(self):
-        t1 = HTML(f' <font size="+1">Input text: </font>')
+        t0 = HTML(f' <font size="+0.4">Model Type: </font>')
+        button = widgets.ToggleButtons(
+            options=['Character', 'Word'],
+            disabled=False,
+            button_style='', # 'success', 'info', 'warning', 'danger' or ''
+        )
+        def update_output():
+            output = self.model.predict(input_box.value, length=self.length)
+            output = '. '.join(map(lambda s: s.strip().capitalize(), output.split('.')))
+            output_box.value = f' <font size="+0.4">{output+"."} </font>'
+
+        def button_changed(change):
+            if change['new'] == 'Word':
+                self.length = 100
+                self.model = self.wordmodel
+            else:
+                self.length = 600
+                self.model = self.charmodel
+            update_output()
+
+        button.observe(button_changed, names='value')
+
+
+        t1 = HTML(f' <font size="+0.4">Input text: </font>')
         input_box = widgets.Text(
                                 placeholder='Type something',
                                 disabled=False,
                                 layout=widgets.Layout(width='500px', height='300px')
                             )
-        t2 = HTML(f' <font size="+1">Output text: </font>')
+        t2 = HTML(f' <font size="+0.4">Output text: </font>')
         output_box = widgets.HTML(
                         placeholder='Waiting for input',
                         layout=widgets.Layout(width='500px', height='300px')
                     )
         input_box.value = 'This is a very good'
-        output = self.model.predict(input_box.value)
-        output = '. '.join(map(lambda s: s.strip().capitalize(), output.split('.')))
+
+        update_output()
         
-        output_box.value = f' <font size="+0.4">{output+"."} </font>'
 
 
         def on_value_change(change):
-            output = self.model.predict(change['new'])
-            output = '. '.join(map(lambda s: s.strip().capitalize(), output.split('.')))
-            
-            output_box.value = f' <font size="+0.4">{output+"."} </font>'
+            update_output()
                 
         input_box.observe(on_value_change, names='value')
         output = HBox([t1, input_box,t2, output_box])
-        return VBox([output, self.debug])
+        button_box = HBox([t0 ,button])
+        return VBox([button_box, output, self.debug])
 
 
 class ModelEvaluation(DataPlotter):
@@ -281,6 +345,7 @@ class ModelEvaluation(DataPlotter):
 
     def _generate_data(self):
         raise NotImplementedError
+
 
 class LorentzEvaluation(ModelEvaluation):
 
