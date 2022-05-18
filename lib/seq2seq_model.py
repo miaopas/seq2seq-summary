@@ -1,3 +1,4 @@
+from ast import Constant
 import pytorch_lightning as pl
 import torch.nn.functional as F
 from pytorch_lightning import Trainer
@@ -11,6 +12,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 import os
 from lib.lfgenerator import LorenzRandFGenerator
 from lib.tcn import TemporalConvNet
+from lib.layers import ConstantPositionalEncoding
 
 from ml_collections import FrozenConfigDict
 CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
@@ -127,60 +129,31 @@ class TCNModel(Seq2SeqModel):
         y1 = y1.permute(0,2,1)
         return self.linear(y1)
 
+class TransformerModel(Seq2SeqModel):
+    def __init__(self, input_dim, output_dim, num_layers, hid_dim, nhead, src_length, dropout=0.1):
+        super(TransformerModel, self).__init__()
 
-if __name__ == "__main__":
-    # model = TextGeneration(hid_dim=256, num_layers=1)
-    
+        self.input_ff = nn.Linear(input_dim, hid_dim)
+        self.output_ff =  nn.Linear(hid_dim, output_dim)
+        transformerlayer = nn.TransformerEncoderLayer(d_model=hid_dim, nhead=nhead, dropout=dropout, batch_first=True)
+        self.transformer = nn.TransformerEncoder(transformerlayer, num_layers=num_layers)
+        self.pos_encoder = ConstantPositionalEncoding(hid_dim, max_len=src_length)
+        mask = self._generate_square_subsequent_mask(src_length)
+        self.register_buffer('mask', mask)
 
-    # model = TextGeneration.load_from_checkpoint('checkpoints/Text-epoch=113-train__loss_epoch=1.74.ckpt')
+    def forward(self, x):
+        x = self.input_ff(x)
+        x = self.pos_encoder(x)
+        y = self.transformer(x, self.mask)
+        output = self.output_ff(y)
+        
+        return output
 
-
-
-    # # trainer = Trainer(accelerator="gpu", devices=4, strategy=DDPStrategy(find_unused_parameters=False),
-    # #                 max_epochs=300,
-    # #                 precision=32,
-    # #                 logger=TensorBoardLogger("runs", name="text_generation"))
-    # checkpoint_callback = ModelCheckpoint(dirpath="checkpoints", save_top_k=4, monitor="train__loss_epoch",filename="Text-{epoch:02d}-{train__loss_epoch:.2f}")
-    # trainer = Trainer(accelerator="gpu", devices=1,
-    #             max_epochs=300,
-    #             precision=32,
-    #             logger=TensorBoardLogger("runs", name="text_generation"),
-    #             callbacks=[checkpoint_callback])
-    # # print(trainer.callback_metrics)
-    # trainer.fit(model=model)
-
-
-
-
-    # model = LorentzModel(hid_dim=256, num_layers=2)
-    model = RNNModel(hid_dim=256, num_layers=2, input_dim=1, output_dim=1)
-    train_dataset = ShiftDataset(size=CONFIG.train_size, seq_len=CONFIG.length, shift=CONFIG.shift)
-    valid_dataset = ShiftDataset(size=CONFIG.valid_size, seq_len=CONFIG.length, shift=CONFIG.shift)
+    def _generate_square_subsequent_mask(self, sz):
+        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
+        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+        return mask
 
 
 
-
-    # import pickle
-    # with open('resources/data/lorentz/lorentz_1_10_32.pkl', 'rb') as f:
-    #     input, output = pickle.load( f)
-    # input = input[:CONFIG.train_size+CONFIG.valid_size]
-    # output = output[:CONFIG.train_size+CONFIG.valid_size]
-
-    # input = torch.tensor(input, dtype=torch.float32)
-    # output = torch.tensor(output, dtype=torch.float32)
-
-    # dataset = torch.utils.data.TensorDataset(input, output)
-    # train_dataset, valid_dataset = torch.utils.data.random_split(dataset, [CONFIG.train_size, CONFIG.valid_size] )
-
-
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=128,drop_last=False, num_workers=os.cpu_count(), pin_memory=True)
-    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=128,drop_last=False, num_workers=os.cpu_count(), pin_memory=True)
-    lr_monitor = LearningRateMonitor(logging_interval='epoch')
-    checkpoint_callback = ModelCheckpoint(dirpath="checkpoints", save_top_k=4, monitor="valid_loss",filename="ShiftRNN-{epoch:02d}-{valid_loss:.2e}")
-    trainer = Trainer(accelerator="gpu", devices=1,
-                max_epochs=1,
-                precision=32,
-                logger=TensorBoardLogger("runs", name="shift_seq_rnn"),
-                callbacks=[checkpoint_callback, LearningRateMonitor])
-    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
 
