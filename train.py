@@ -10,7 +10,7 @@ import pickle
 import torch
 from lib.seq2seq_model import TCNModel, RNNModel, TransformerModel
 from math import floor
-
+from datetime import datetime
 from ml_collections import FrozenConfigDict
 CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
                                                 NUM = 20,
@@ -45,9 +45,11 @@ def train_model(name, model, input, output, train_test_split, epochs=300, batch_
     train_dataset, valid_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,drop_last=True, num_workers=os.cpu_count(), pin_memory=True)
     valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size,drop_last=True, num_workers=os.cpu_count(), pin_memory=True)
+    
 
     lr_monitor = LearningRateMonitor(logging_interval='epoch')
-    checkpoint_callback = ModelCheckpoint(dirpath="checkpoints", save_top_k=4, monitor="valid_loss",filename=name + "-{epoch:02d}-{valid_loss:.2e}")
+    now = datetime.now().strftime("%H:%M:%S__%m-%d")
+    checkpoint_callback = ModelCheckpoint(dirpath=f"checkpoints/{now}", save_top_k=4, monitor="valid_loss",filename=name + "-{epoch:02d}-{valid_loss:.2e}")
     trainer = Trainer(accelerator="gpu", devices=1,
                 max_epochs=epochs,
                 precision=32,
@@ -101,6 +103,16 @@ def train_transformer_shift():
 
     train_model('Shift-Transformer', model, input, output, 0.8, epochs=5000)
 
+
+def train_transformer_shift():
+
+    model = TransformerModel(input_dim=1, output_dim=1, num_layers=5,hid_dim=32,nhead=8,src_length=128)
+
+
+    with open('resources/data/lorentz/lorentz_1_10_128.pkl', 'rb') as f:
+        input, output = pickle.load(f)
+
+    train_model('Lorentz-Transformer', model, input, output, 0.8, epochs=5000)
 
 train_transformer_shift()
 
