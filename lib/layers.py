@@ -18,7 +18,7 @@ class ConstantPositionalEncoding(nn.Module):
         self.register_buffer('pe', pe)
 
     def forward(self, x):
-        return x + self.pe
+        return x + self.pe[:,:x.shape[1],:]
 
 class Module(nn.Module):
     '''

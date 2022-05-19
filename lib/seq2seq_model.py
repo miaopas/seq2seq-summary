@@ -1,18 +1,12 @@
-from ast import Constant
 import pytorch_lightning as pl
-import torch.nn.functional as F
-from pytorch_lightning import Trainer
 import torch
 from torch import nn
-from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
-# print(sys.executable)
-from pytorch_lightning.strategies import DDPStrategy
 from scipy.special import softmax
-from pytorch_lightning.loggers import TensorBoardLogger
 import os
-from lib.lfgenerator import LorenzRandFGenerator
 from lib.tcn import TemporalConvNet
 from lib.layers import ConstantPositionalEncoding
+import numpy as np
+from torch.utils.data import TensorDataset
 
 from ml_collections import FrozenConfigDict
 CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
@@ -79,17 +73,17 @@ class Seq2SeqModel(pl.LightningModule):
                     }
         return {"optimizer": optimizer, "lr_scheduler":scheduler}
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch, batch_idx, loss=nn.MSELoss()):
         x, y = batch
         y_hat = self(x)
-        trainloss = nn.MSELoss()(y_hat, y)
+        trainloss = loss(y_hat, y)
         self.log("train_loss", trainloss, on_epoch=True, prog_bar=True, logger=True)
         return trainloss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx, loss=nn.MSELoss()):
         x, y = batch
         y_hat = self(x)
-        validloss = nn.MSELoss()(y_hat, y)
+        validloss = loss(y_hat, y)
         self.log("valid_loss", validloss, prog_bar=True, logger=True)
         return validloss
 
@@ -155,5 +149,116 @@ class TransformerModel(Seq2SeqModel):
         return mask
 
 
+
+class TransformerTextGeneration(Seq2SeqModel):
+    def __init__(self, num_layers, hid_dim, nhead, dropout=0.1, load_data=False):
+        super().__init__() 
+        self.load_data = load_data
+        input_dim = output_dim = self.data_setup()
+        src_length = self.maxlen
+        self.input_ff = nn.Linear(input_dim, hid_dim)
+        self.output_ff =  nn.Linear(hid_dim, output_dim)
+        transformerlayer = nn.TransformerEncoderLayer(d_model=hid_dim, nhead=nhead, dropout=dropout, batch_first=True)
+        self.transformer = nn.TransformerEncoder(transformerlayer, num_layers=num_layers)
+        self.pos_encoder = ConstantPositionalEncoding(hid_dim, max_len=src_length)
+        mask = self._generate_square_subsequent_mask(src_length)
+        self.register_buffer('mask', mask)
+        self.save_hyperparameters()
+
+
+    def data_setup(self):
+        data_name = 'wiki'
+        with open(f'resources/data/text/{data_name}.txt', encoding='utf-8') as f:
+            self.text = f.read().lower()
+
+        self.chars = sorted(list(set(self.text)))
+        self.char_indices = {c: i for i, c in enumerate(self.chars)}
+        self.indices_char = {i: c for i, c in enumerate(self.chars)}
+        
+        self.maxlen = 50
+        if self.data_setup:
+            
+            step = 5
+            sentences = []
+            next_chars = []
+            for i in range(0, len(self.text) - self.maxlen, step):
+                sentences.append(self.text[i: i + self.maxlen])
+                next_chars.append(self.text[i + self.maxlen])
+
+            x = np.zeros((len(sentences), self.maxlen, len(self.chars)), dtype=bool)
+            y = np.zeros(len(sentences))
+            for i, sentence in enumerate(sentences):
+                for t, char in enumerate(sentence):
+                    x[i, t, self.char_indices[char]] = 1
+                y[i] = self.char_indices[next_chars[i]]
+
+            self.dataset = TensorDataset(torch.tensor(x, dtype=torch.float32), torch.LongTensor(y))
+        return len(self.chars)
+
+    def forward(self, x, predicting=False):
+
+        x = self.input_ff(x)
+        x = self.pos_encoder(x)
+
+        # During prediction the mask may have different shape.
+        if not predicting:
+            mask = self.mask
+        else:
+            mask = self._generate_square_subsequent_mask(x.shape[1])
+
+        y = self.transformer(x, mask)[:,-1,:]
+        output = self.output_ff(y)
+        
+        return output
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
+        return [optimizer]
+
+    def training_step(self, batch, batch_idx):
+        return super().training_step(batch, batch_idx, nn.CrossEntropyLoss())
+
+    def validation_step(self, batch, batch_idx):
+        return super().validation_step(batch, batch_idx, nn.CrossEntropyLoss())
+
+    def predict(self, sentence=None, start_index=None, length=400, diversity = 0.5):
+        def sample(preds, temperature=1.0):
+            preds = np.asarray(preds).astype('float64')
+            preds = np.log(preds) / temperature
+            exp_preds = np.exp(preds)
+            preds = exp_preds / np.sum(exp_preds)
+            probas = np.random.multinomial(1, preds, 1)
+            return np.argmax(probas)
+        
+        generated = ''
+        if start_index is None and sentence is None:
+            start_index = np.random.randint(0, len(self.text)-self.maxlen)
+        if sentence is None:
+            sentence = self.text[start_index: start_index + self.maxlen]
+        sentence=sentence.lower()
+        generated += sentence
+        for _ in range(length):
+            x_pred = np.zeros((1, len(sentence), len(self.chars)))
+            for t, char in enumerate(sentence):
+                x_pred[0, t, self.char_indices[char]] = 1.
+
+            preds = self(torch.tensor(x_pred, dtype=torch.float32), predicting=True)[0].detach().cpu().numpy()
+            preds = softmax(preds)
+            next_index = sample(preds, diversity)
+
+            
+            next_char = self.indices_char[next_index]
+            sentence = sentence[1:] + next_char
+            generated += next_char
+        return generated
+
+
+    def train_dataloader(self):
+        return torch.utils.data.DataLoader(self.dataset, batch_size=128,drop_last=True, num_workers=os.cpu_count(), pin_memory=True)
+
+    def _generate_square_subsequent_mask(self, sz):
+        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
+        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+        return mask
 
 

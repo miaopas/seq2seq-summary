@@ -1,14 +1,11 @@
 from pytorch_lightning import Trainer
 import torch
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
-# print(sys.executable)
 from pytorch_lightning.strategies import DDPStrategy
-from scipy.special import softmax
 from pytorch_lightning.loggers import TensorBoardLogger
 import os
 import pickle
-import torch
-from lib.seq2seq_model import TCNModel, RNNModel, TransformerModel
+from lib.seq2seq_model import TCNModel, RNNModel, TransformerModel, TransformerTextGeneration
 from math import floor
 from datetime import datetime
 from ml_collections import FrozenConfigDict
@@ -23,7 +20,7 @@ CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
                                                 LENGTH=32 ), 'train_size':9500, 'valid_size': 500})
 
 
-def train_model(name, model, input, output, train_test_split, epochs=300, batch_size = 128):
+def train_model(name, model, input, output, train_test_split, epochs=300, batch_size=128, check_point_monitor='valid_loss'):
     """_summary_
 
     Args:
@@ -33,28 +30,39 @@ def train_model(name, model, input, output, train_test_split, epochs=300, batch_
         output (ndarray): output array
         train_test_split (float): ratio of train test split
     """
+    if input:
+    # If input not provided then skip this part
+        if not isinstance(input, torch.Tensor):
+            input = torch.tensor(input, dtype=torch.float32)
+        if not isinstance(output, torch.Tensor):
+            output = torch.tensor(output, dtype=torch.float32)
 
-    input = torch.tensor(input, dtype=torch.float32)
-    output = torch.tensor(output, dtype=torch.float32)
+        dataset = torch.utils.data.TensorDataset(input, output)
+        total = len(dataset)
+        train_size = floor(total*train_test_split)
+        test_size = total - train_size
 
-    dataset = torch.utils.data.TensorDataset(input, output)
-    total = len(dataset)
-    train_size = floor(total*train_test_split)
-    test_size = total - train_size
-
-    train_dataset, valid_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,drop_last=True, num_workers=os.cpu_count(), pin_memory=True)
-    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size,drop_last=True, num_workers=os.cpu_count(), pin_memory=True)
-    
+        train_dataset, valid_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,drop_last=True, num_workers=os.cpu_count(), pin_memory=True)
+        valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size,drop_last=True, num_workers=os.cpu_count(), pin_memory=True)
+    else:
+        train_loader = None
+        valid_loader = None
 
     lr_monitor = LearningRateMonitor(logging_interval='epoch')
     now = datetime.now().strftime("%H:%M:%S__%m-%d")
-    checkpoint_callback = ModelCheckpoint(dirpath=f"checkpoints/{now}", save_top_k=4, monitor="valid_loss",filename=name + "-{epoch:02d}-{valid_loss:.2e}")
-    trainer = Trainer(accelerator="gpu", devices=1,
+    checkpoint_callback = ModelCheckpoint(dirpath=f"checkpoints/{now}", 
+                                        save_top_k=4, 
+                                        monitor=check_point_monitor,
+                                        filename=name + "-{epoch:02d}-{valid_loss:.2e}") 
+    trainer = Trainer(accelerator="gpu", 
+                devices=4,
+                strategy=DDPStrategy(find_unused_parameters=False),
                 max_epochs=epochs,
                 precision=32,
                 logger=TensorBoardLogger("runs", name=name),
                 callbacks=[checkpoint_callback, lr_monitor])
+
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
 
 
@@ -114,10 +122,11 @@ def train_transformer_shift():
 
     train_model('Lorentz-Transformer', model, input, output, 0.8, epochs=5000)
 
-train_transformer_shift()
+
+def train_transformer_text():
+
+    model = TransformerTextGeneration(num_layers=12,hid_dim=720,nhead=12).load_from_checkpoint('checkpoints/17:26:23__05-19/Text-Transformer-epoch=45-valid_loss=0.00e+00.ckpt')
 
 
-# trainer = Trainer(accelerator="gpu", devices=4, strategy=DDPStrategy(find_unused_parameters=False),
-#                     max_epochs=300,
-#                     precision=32,
-#                     logger=TensorBoardLogger("runs", name="text_generation"))
+    train_model('Text-Transformer', model, None, None, 0.8, epochs=5000, check_point_monitor='train_loss_epoch')
+
