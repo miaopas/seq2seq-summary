@@ -1,4 +1,3 @@
-from pydoc import describe
 import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
@@ -7,7 +6,6 @@ import numpy as np
 import pathlib
 from tqdm import tqdm
 from lib.layers import Encoder
-from math import exp
 
 
 class Dataset(torch.utils.data.Dataset):

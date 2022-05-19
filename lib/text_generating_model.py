@@ -1,10 +1,8 @@
 import pytorch_lightning as pl
-import torch.nn.functional as F
 import torch
 from pytorch_lightning import Trainer
 from torch import nn
 from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.strategies import DDPStrategy
 from scipy.special import softmax
 from torch.utils.data import TensorDataset
 from pytorch_lightning.loggers import TensorBoardLogger
