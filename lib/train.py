@@ -15,7 +15,7 @@ CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
                             'convo': dict(LENGTH = 100,
                                                 NUM = 20,
                                                 FILTER = [0.002, 0.022, 0.097, 0.159, 0.097, 0.022, 0.002]),
-                                'lorentz': dict(NUM = 10, 
+                                'lorenz': dict(NUM = 10, 
                                                 K=1, J=10, 
                                                 LENGTH=32 ), 'train_size':9500, 'valid_size': 500})
 
@@ -70,14 +70,14 @@ def train_model(name, model, input, output, train_test_split, epochs=300, batch_
 
 
 
-def train_rnn_lorentz():
+def train_rnn_lorenz():
 
     model = RNNModel(hid_dim=256, num_layers=2, input_dim=1, output_dim=1)
 
-    with open('resources/data/lorentz/lorentz_1_10_128.pkl', 'rb') as f:
+    with open('resources/data/lorenz/lorenz_1_10_128.pkl', 'rb') as f:
         input, output = pickle.load(f)
 
-    train_model('Lorentz-RNN', model, input, output, 0.8, epochs=5000)
+    train_model('Lorenz-RNN', model, input, output, 0.8, epochs=5000)
 
 
 def train_TCN_shift():
@@ -90,14 +90,14 @@ def train_TCN_shift():
     train_model('Shift-TCN', model, input, output, 0.8, epochs=5000)
 
 
-def train_TCN_lorentz():
+def train_TCN_lorenz():
 
     model = TCNModel(input_size=1, output_size=1,num_channels=[30]*7, kernel_size=4, dropout=0.1)
 
-    with open('resources/data/lorentz/lorentz_1_10_128.pkl', 'rb') as f:
+    with open('resources/data/lorenz/lorenz_1_10_128.pkl', 'rb') as f:
         input, output = pickle.load(f)
 
-    train_model('Lorentz-TCN', model, input, output, 0.8, epochs=5000)
+    train_model('Lorenz-TCN', model, input, output, 0.8, epochs=5000)
 
 
 
@@ -117,10 +117,10 @@ def train_transformer_shift():
     model = TransformerModel(input_dim=1, output_dim=1, num_layers=5,hid_dim=32,nhead=8,src_length=128)
 
 
-    with open('resources/data/lorentz/lorentz_1_10_128.pkl', 'rb') as f:
+    with open('resources/data/lorenz/lorenz_1_10_128.pkl', 'rb') as f:
         input, output = pickle.load(f)
 
-    train_model('Lorentz-Transformer', model, input, output, 0.8, epochs=5000)
+    train_model('Lorenz-Transformer', model, input, output, 0.8, epochs=5000)
 
 
 def train_transformer_text():

@@ -15,7 +15,7 @@ CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
                             'convo': dict(LENGTH = 100,
                                                 NUM = 20,
                                                 FILTER = [0.002, 0.022, 0.097, 0.159, 0.097, 0.022, 0.002]),
-                                'lorentz': dict(NUM = 10, 
+                                'lorenz': dict(NUM = 10, 
                                                 K=1, J=10, 
                                                 LENGTH=32 ), 'train_size':49500, 'valid_size': 500})
 

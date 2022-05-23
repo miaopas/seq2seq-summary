@@ -18,7 +18,7 @@ CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
                             'convo': dict(LENGTH = 100,
                                         NUM = 20,
                                         FILTER = [0.002, 0.022, 0.097, 0.159, 0.097, 0.022, 0.002]),
-                            'lorentz': dict(NUM = 10, 
+                            'lorenz': dict(NUM = 10, 
                                             K=1, J=10, 
                                             LENGTH=128 )})
 class DataPlotter:
@@ -166,21 +166,21 @@ class ShiftPlotter(DataPlotter):
             output.append(np.concatenate((np.zeros(self.shift), data[:-self.shift])))
         return input, output
 
-class LorentzPlotter(DataPlotter):
+class LorenzPlotter(DataPlotter):
     def __init__(self):
         input, output = self._generate_data()
         super().__init__(input=input, output=output, num_of_plots=1, 
                         title=f'',
-                        descrip=f'The output is the response of input defined by the Lorentz96 system.',
+                        descrip=f'The output is the response of input defined by the Lorenz96 system.',
                         subplot_title=('Intput/Output Sequences',''), )
     
     def _generate_data(self):
-        lorentz_generator = LorenzRandFGenerator({'n_init':CONFIG.lorentz.NUM, 
-                                                    'K':CONFIG.lorentz.K, 
-                                                    'J':CONFIG.lorentz.J,
-                                                    'path_len':CONFIG.lorentz.LENGTH})
+        lorenz_generator = LorenzRandFGenerator({'n_init':CONFIG.lorenz.NUM, 
+                                                    'K':CONFIG.lorenz.K, 
+                                                    'J':CONFIG.lorenz.J,
+                                                    'path_len':CONFIG.lorenz.LENGTH})
 
-        input, output = lorentz_generator.generate(scale=False)
+        input, output = lorenz_generator.generate(scale=False)
 
         return input.squeeze(-1)[:,1:], output.squeeze(-1)[:,1:]
 
@@ -348,14 +348,14 @@ class ModelEvaluation(DataPlotter):
         raise NotImplementedError
 
 
-class LorentzEvaluation(ModelEvaluation):
+class LorenzEvaluation(ModelEvaluation):
 
-    def __init__(self, model, path, title='Lorentz System') -> None:
+    def __init__(self, model, path, title='Lorenz System') -> None:
         self.model = model
         self.path = path
         K, J, length= map(lambda x:int(x), Path(self.path).stem.split('_')[1:])
         descrip = f'K = {K}, J = {J}, Length = {length}.'
-        self.lorentz_generator = LorenzRandFGenerator({'data_num': 20 ,'n_init':20, 
+        self.lorenz_generator = LorenzRandFGenerator({'data_num': 20 ,'n_init':20, 
                                                     'K':K, 
                                                     'J':J,
                                                     'path_len':length})
@@ -367,7 +367,7 @@ class LorentzEvaluation(ModelEvaluation):
 
     def _generate_data(self):
             
-        input, output = self.lorentz_generator.generate()
+        input, output = self.lorenz_generator.generate()
         model = self.model.load_from_checkpoint(self.path)
         pred = model.predict(input)
 
