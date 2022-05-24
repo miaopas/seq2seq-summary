@@ -31,7 +31,7 @@ def train_model(name, model, input, output, train_test_split, epochs=300, batch_
         output (ndarray): output array
         train_test_split (float): ratio of train test split
     """
-    if input:
+    if input is not None:
     # If input not provided then skip this part
         if not isinstance(input, torch.Tensor):
             input = torch.tensor(input, dtype=torch.float32)
@@ -89,6 +89,15 @@ def train_rnn_lorenz():
 
     train_model('Lorenz-RNN', model, input, output, 0.8, epochs=5000)
 
+def train_rnn_shift():
+
+    model = RNNModel(hid_dim=128, num_layers=1, input_dim=1, output_dim=1)
+
+
+    with open('resources/data/shift/shift_32_128.pkl', 'rb') as f:
+        input, output = pickle.load(f)
+
+    train_model('Shift-TCN', model, input, output, 0.8, epochs=5000, devices=1)
 
 def train_TCN_shift():
 
