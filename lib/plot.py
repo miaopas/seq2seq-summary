@@ -9,7 +9,7 @@ from pathlib import Path
 import ast
 from ml_collections import FrozenConfigDict
 from lib.lfgenerator import LorenzRandFGenerator
-from lib.text_generating_model import WordGeneration, TextGeneration
+from lib.seq2seq_model import RNNTextGeneration, RNNWordGeneration
 from lib.lfgenerator import ShiftGenerator
 
 CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
@@ -278,8 +278,8 @@ class TextGenerator:
     
 
     def __init__(self) -> None:
-        self.wordmodel = WordGeneration.load_from_checkpoint('resources/saved_models/text/wordgeneration_demo.ckpt', load_data=False)
-        self.charmodel = TextGeneration.load_from_checkpoint('resources/saved_models/text/text_generation_demo.ckpt', load_data=False)
+        self.wordmodel = RNNWordGeneration.load_from_checkpoint('resources/saved_models/text/wordgeneration_demo.ckpt', load_data=False)
+        self.charmodel = RNNTextGeneration.load_from_checkpoint('resources/saved_models/text/text_generation_demo.ckpt', load_data=False)
         
         self.model = self.charmodel
         self.length = 600
@@ -289,14 +289,16 @@ class TextGenerator:
     def plot(self):
         t0 = HTML(f' <font size="+0.4">Model Type: </font>')
         button = widgets.ToggleButtons(
-            options=['Character', 'Word'],
+            # options=['Character', 'Word'],
+            options=['Character'],
             disabled=False,
             button_style='', # 'success', 'info', 'warning', 'danger' or ''
         )
         def update_output():
             output = self.model.predict(input_box.value, length=self.length)
-            output = '. '.join(map(lambda s: s.strip().capitalize(), output.split('.')))
-            output_box.value = f' <font size="+0.4">{output+"."} </font>'
+            output = output.replace('\n', '<br>')
+            # output = '. '.join(map(lambda s: s.strip().capitalize(), output.split('.')))
+            output_box.value = f' <font size="+0.4">{output} </font>'
 
         def button_changed(change):
             if change['new'] == 'Word':
@@ -319,7 +321,7 @@ class TextGenerator:
         t2 = HTML(f' <font size="+0.4">Output text: </font>')
         output_box = widgets.HTML(
                         placeholder='Waiting for input',
-                        layout=widgets.Layout(width='500px', height='300px')
+                        layout=widgets.Layout(width='500px', height='800px')
                     )
         input_box.value = 'This is a very good'
 

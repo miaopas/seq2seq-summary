@@ -5,7 +5,8 @@ from pytorch_lightning.strategies import DDPStrategy
 from pytorch_lightning.loggers import TensorBoardLogger
 import os
 import pickle
-from lib.seq2seq_model import TCNModel, RNNModel, TransformerModel, TransformerTextGeneration
+from lib.seq2seq_model import TCNModel, RNNModel, TransformerModel, TransformerTextGeneration, RNNTextGeneration,RNNWordGeneration
+
 from math import floor
 from datetime import datetime
 from ml_collections import FrozenConfigDict
@@ -20,7 +21,7 @@ CONFIG = FrozenConfigDict({'shift': dict(LENGTH = 100,
                                                 LENGTH=32 ), 'train_size':9500, 'valid_size': 500})
 
 
-def train_model(name, model, input, output, train_test_split, epochs=300, batch_size=128, check_point_monitor='valid_loss'):
+def train_model(name, model, input, output, train_test_split, epochs=300, batch_size=128, check_point_monitor='valid_loss', devices=4):
     """_summary_
 
     Args:
@@ -55,13 +56,22 @@ def train_model(name, model, input, output, train_test_split, epochs=300, batch_
                                         save_top_k=4, 
                                         monitor=check_point_monitor,
                                         filename=name + "-{epoch:02d}-{valid_loss:.2e}") 
-    trainer = Trainer(accelerator="gpu", 
-                devices=4,
-                strategy=DDPStrategy(find_unused_parameters=False),
-                max_epochs=epochs,
-                precision=32,
-                logger=TensorBoardLogger("runs", name=name),
-                callbacks=[checkpoint_callback, lr_monitor])
+    
+    if devices == 1:
+        trainer = Trainer(accelerator="gpu", 
+                    devices=1,
+                    max_epochs=epochs,
+                    precision=32,
+                    logger=TensorBoardLogger("runs", name=name),
+                    callbacks=[checkpoint_callback, lr_monitor])
+    else:
+        trainer = Trainer(accelerator="gpu", 
+                    devices=devices,
+                    strategy=DDPStrategy(find_unused_parameters=False),
+                    max_epochs=epochs,
+                    precision=32,
+                    logger=TensorBoardLogger("runs", name=name),
+                    callbacks=[checkpoint_callback, lr_monitor])
 
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
 
@@ -129,4 +139,14 @@ def train_transformer_text():
 
 
     train_model('Text-Transformer', model, None, None, 0.8, epochs=5000, check_point_monitor='train_loss_epoch')
+
+def train_rnn_text():
+    model = RNNTextGeneration(hid_dim=128, num_layers=1, load_data=True)
+    train_model('Text-RNN', model, None, None, None, epochs=5000, check_point_monitor='train_loss_epoch', devices=4)
+
+
+
+def train_rnn_word():
+    model = RNNWordGeneration(hid_dim=128, num_layers=1, load_data=True)
+    train_model('Word-RNN', model, None, None, None, epochs=5000, check_point_monitor='train_loss_epoch', devices=4)
 
