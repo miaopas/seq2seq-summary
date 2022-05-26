@@ -131,7 +131,7 @@ def train_transformer_shift():
     train_model('Shift-Transformer', model, input, output, 0.8, epochs=5000)
 
 
-def train_transformer_shift():
+def train_transformer_lorenz():
 
     model = TransformerModel(input_dim=1, output_dim=1, num_layers=5,hid_dim=32,nhead=8,src_length=128)
 
