@@ -1,5 +1,30 @@
 # Notebooks on sequence to sequence modelling
 
-Install demo_requirements.txt if you just want to run the seq2seq.ipynb demo.
+This demo is tested with python version 3.8.13.
 
-If you want to train the model with gpu, install full_requirements.txt with extra packages related with training.
+## Quick Start
+
+Create and activate a new virtual environment (`virtualenv` or `conda`).
+For example, using `conda`:
+
+```bash
+$conda create --name seqdemo python=3.8.13
+$conda activate seqdemo
+```
+
+Now, install the required packages.
+* To reproduce the demo only
+  ```bash
+  $pip install -r demo_requirements.txt
+  ```
+* To reproducing the model training (GPU is recommended), additional packages are needed
+  ```bash
+  $pip install -r full_requirements.txt
+  ```
+
+The demo can be found in `seq2seq.ipynb`.
+
+## Contributors
+
+*  Haotian Jiang (NUS)
+*  Qianxiao Li (NUS)
