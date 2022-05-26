@@ -159,3 +159,13 @@ def train_rnn_word():
     model = RNNWordGeneration(hid_dim=128, num_layers=1, load_data=True)
     train_model('Word-RNN', model, None, None, None, epochs=5000, check_point_monitor='train_loss_epoch', devices=4)
 
+
+def train_small_transformer_shift():
+
+    model = TransformerModel(input_dim=1, output_dim=1, num_layers=1,hid_dim=16,nhead=4,src_length=128)
+
+
+    with open('resources/data/shift/shift_32_128.pkl', 'rb') as f:
+        input, output = pickle.load(f)
+
+    train_model('Shift-Transformer', model, input, output, 0.8, epochs=5000, devices=2)

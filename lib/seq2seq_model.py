@@ -88,9 +88,11 @@ class Seq2SeqModel(pl.LightningModule):
         return validloss
 
     def predict(self, x):
-        x = torch.tensor(x, dtype=torch.float32)
-        pred = self(x)
-        return pred.detach().cpu().numpy()
+        self.eval()
+        with torch.no_grad():
+            x = torch.tensor(x, dtype=torch.float32)
+            pred = self(x)
+            return pred.detach().cpu().numpy()
 
 
 class RNNModel(Seq2SeqModel):
@@ -445,3 +447,31 @@ class RNNWordGeneration(RNNTextGeneration):
             sentence = sentence[1:] + next_char
             generated  = generated + next_char +' '
         return generated
+
+
+
+
+class CustomizedTransformerModel(Seq2SeqModel):
+    def __init__(self, input_dim, output_dim, num_layers, hid_dim, nhead, src_length, dropout=0.1):
+        super(CustomizedTransformerModel, self).__init__()
+        from lib.transformer import TransformerEncoder, TransformerEncoderLayer
+        self.input_ff = nn.Linear(input_dim, hid_dim)
+        self.output_ff =  nn.Linear(hid_dim, output_dim)
+        transformerlayer = TransformerEncoderLayer(d_model=hid_dim, nhead=nhead, dropout=dropout, batch_first=True)
+        self.transformer = TransformerEncoder(transformerlayer, num_layers=num_layers)
+        self.pos_encoder = ConstantPositionalEncoding(hid_dim, max_len=src_length)
+        mask = self._generate_square_subsequent_mask(src_length)
+        self.register_buffer('mask', mask)
+
+    def forward(self, x):
+        x = self.input_ff(x)
+        x = self.pos_encoder(x)
+        y = self.transformer(x, self.mask)
+        output = self.output_ff(y)
+        
+        return output
+
+    def _generate_square_subsequent_mask(self, sz):
+        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
+        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+        return mask

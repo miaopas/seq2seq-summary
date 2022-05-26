@@ -2,7 +2,7 @@ import random
 import numpy as np
 import torch
 from torch import nn
-from lib.seq2seq_model import RNNModel, TCNModel, TransformerModel
+from lib.seq2seq_model import RNNModel, TCNModel, TransformerModel, CustomizedTransformerModel
 from lib.plot import ShiftPlotter, ConvoPlotter, LorenzPlotter, TextGenerator, LorenzEvaluation, ShiftEvaluation
 
 
